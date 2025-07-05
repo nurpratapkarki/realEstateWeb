@@ -1,0 +1,33 @@
+Django==4.2.7
+djangorestframework==3.14.0
+django-cors-headers==4.3.1
+django-filter==23.3
+pillow>=10.1.0
+python-decouple==3.8
+
+# Database drivers (uncomment as needed)
+# psycopg2-binary==2.9.7  # For PostgreSQL
+# mysqlclient==2.2.0      # For MySQL
+
+# For production
+gunicorn==21.2.0
+whitenoise==6.6.0
+
+# For development
+django-debug-toolbar==4.2.0
+
+# Optional: For API documentation
+drf-spectacular==0.26.5
+
+# Optional: For testing
+pytest==7.4.3
+pytest-django==4.7.0
+factory-boy==3.3.0
+
+# Optional: For caching
+redis==5.0.1
+django-redis==5.4.0
+
+# Optional: For task queues
+celery==5.3.4
+django-celery-beat==2.5.0
