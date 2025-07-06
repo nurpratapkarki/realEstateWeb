@@ -3,20 +3,20 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.html import format_html
 from .models import (
     User, Organization, AboutUs, Achievements, Service, Journey,
-    HeroSection, PropertyType, Property, Agent, Contact
+    HeroSection, PropertyType, Property, Agent, Contact, SaveProperty
 )
 
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
-    list_display = ['username', 'email', 'first_name', 'last_name', 'is_active', 'is_staff', 'date_joined']
+    list_display = ['username', 'email', 'first_name', 'last_name', 'phone_number', 'is_active', 'is_staff', 'date_joined']
     list_filter = ['is_active', 'is_staff', 'date_joined']
     search_fields = ['username', 'email', 'first_name', 'last_name']
     ordering = ['-date_joined']
     
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
-        ('Personal info', {'fields': ('first_name', 'last_name', 'email')}),
+        ('Personal info', {'fields': ('first_name', 'last_name', 'email','phone_number')}),
         ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
         ('Important dates', {'fields': ('last_login', 'date_joined')}),
     )
@@ -157,7 +157,22 @@ class AgentAdmin(admin.ModelAdmin):
         }),
     )
 
-
+@admin.register(SaveProperty)
+class SavedPropertyAdmin(admin.ModelAdmin):
+    list_display = ['user', 'property', 'created_at']
+    list_filter = ['created_at']
+    search_fields = ['user__username', 'property__title']
+    readonly_fields = ['created_at', 'updated_at']
+    
+    fieldsets = (
+        ('User & Property', {
+            'fields': ('user', 'property')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
 @admin.register(Contact)
 class ContactAdmin(admin.ModelAdmin):
     list_display = ['get_full_name', 'email', 'phone', 'subject', 'status', 'preferred_contact_method', 'created_at']
@@ -203,6 +218,7 @@ class ContactAdmin(admin.ModelAdmin):
         queryset.update(status='closed')
         self.message_user(request, f'{queryset.count()} contacts marked as closed.')
     mark_as_closed.short_description = 'Mark selected contacts as closed'
+
 
 
 # Customize admin site

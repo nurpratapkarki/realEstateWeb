@@ -35,6 +35,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
     first_name = models.CharField(max_length=30, blank=True)
     last_name = models.CharField(max_length=30, blank=True)
+    phone_number = models.CharField(
+        max_length=15,
+        validators=[RegexValidator(r'^\+?1?\d{9,15}$', 'Enter a valid phone number.')]
+    )
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
@@ -257,7 +261,6 @@ class Property(models.Model):
 
 
 class Agent(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='agent_profile')
     name = models.CharField(max_length=100)
     specialties = models.CharField(
         max_length=200, 
@@ -342,3 +345,17 @@ class Contact(models.Model):
     
     def get_full_name(self):
         return f"{self.first_name} {self.last_name}"
+class SaveProperty(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='saved_properties')
+    property = models.ForeignKey(Property, on_delete=models.CASCADE, related_name='saved_by_users')
+    saved_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ('user', 'property')
+        verbose_name = 'Saved Property'
+        verbose_name_plural = 'Saved Properties'
+    
+    def __str__(self):
+        return f"{self.user.username} saved {self.property.title}"
+    def get_property(self):
+        return self.property

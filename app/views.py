@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate, login
-from django.db.models import Q, Count
+from django.db.models import Q, Count, Min, Max
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
@@ -354,8 +354,8 @@ def property_filters(request):
         
         # Get price range
         price_range = Property.objects.aggregate(
-            min_price=models.Min('price'),
-            max_price=models.Max('price')
+            min_price=Min('price'),
+            max_price=Max('price')
         )
         
         # Get bedroom options
