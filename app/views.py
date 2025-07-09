@@ -55,16 +55,6 @@ from rest_framework.authtoken.models import Token
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from datetime import datetime, timedelta
-from django.views.decorators.csrf import ensure_csrf_cookie
-from django.views.decorators.http import require_http_methods
-from django.middleware.csrf import get_token
-from django.http import JsonResponse
-
-
-@ensure_csrf_cookie
-def get_csrf_token(request):
-    return JsonResponse({"csrfToken": request.META.get("CSRF_COOKIE")})
-
 
 User = get_user_model()
 
