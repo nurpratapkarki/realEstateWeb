@@ -541,5 +541,5 @@ class PropertyAlertDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 
 class TeamViewSet(generics.ListAPIView):
-    queryset = Team.objects.all()
+    queryset = Team.objects.all().order_by("id")
     serializer_class = TeamSerializer
