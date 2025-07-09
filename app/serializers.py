@@ -88,10 +88,11 @@ class UserSerializer(serializers.ModelSerializer):
             "phone_number",
             "is_active",
             "date_joined",
+            "role",
         )
         read_only_fields = ("id", "date_joined")
 
-    def get_roles(self, obj):
+    def get_role(self, obj):
         if obj.is_superuser or obj.is_staff:
             return "admin"
         return "customer"
