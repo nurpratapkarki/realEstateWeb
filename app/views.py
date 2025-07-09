@@ -54,6 +54,7 @@ from .serializers import (
     PropertyAlertSerializer,
     PropertyAlertCreateSerializer,
     TeamSerializer,
+    AgentSerializer,
 )
 
 User = get_user_model()
@@ -508,7 +509,7 @@ class AgentListView(generics.ListAPIView):
     """Get all active agents"""
 
     queryset = Agent.objects.filter(is_active=True).order_by("user")
-    serializer_class = UserSerializer
+    serializer_class = AgentSerializer
     # permission_classes = [permissions.AllowAny]
 
 

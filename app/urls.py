@@ -90,7 +90,7 @@ urlpatterns = [
     path("journey-steps/", JourneyStepListView.as_view(), name="journey-steps"),
     path("about-us/", AboutUsDetailView.as_view(), name="about-us"),
     path("team/", TeamViewSet.as_view(), name="team"),
-    path("agent", AgentListView.as_view(), name="agent"),
+    path("agent/", AgentListView.as_view(), name="agent"),
     # Include router URLs
     path("", include(router.urls)),
 ]
