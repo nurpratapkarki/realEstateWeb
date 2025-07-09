@@ -2,60 +2,93 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
     # Authentication Views
-    UserRegistrationView, UserLoginView, UserLogoutView, UserDetailView,
-    
+    UserRegistrationView,
+    UserLoginView,
+    UserLogoutView,
+    UserDetailView,
     # Property Views
     PropertyViewSet,
-    
     # Customer Dashboard Views
-    CustomerSavedPropertiesView, CustomerSavedPropertyCreateView,
-    CustomerInquiriesView, CustomerInquiryCreateView,
-    CustomerVisitsView, CustomerVisitCreateView,
-    
+    CustomerSavedPropertiesView,
+    CustomerSavedPropertyCreateView,
+    CustomerInquiriesView,
+    CustomerInquiryCreateView,
+    CustomerVisitsView,
+    CustomerVisitCreateView,
     # Admin Dashboard Views
-    AdminAnalyticsView, AdminUserManagementViewSet,
-    
+    AdminAnalyticsView,
+    AdminUserManagementViewSet,
     # Additional Views
-    PropertyTypeListView, OrganizationDetailView, ServiceListView,
-    HeroSlideListView, JourneyStepListView, AboutUsDetailView,
-    PropertyAlertListCreateView, PropertyAlertDetailView
+    PropertyTypeListView,
+    OrganizationDetailView,
+    ServiceListView,
+    HeroSlideListView,
+    JourneyStepListView,
+    AboutUsDetailView,
+    PropertyAlertListCreateView,
+    PropertyAlertDetailView,
+    TeamViewSet,
 )
 
 # Router for ViewSets
 router = DefaultRouter()
-router.register(r'properties', PropertyViewSet, basename='property')
-router.register(r'admin/users', AdminUserManagementViewSet, basename='admin-users')
+router.register(r"properties", PropertyViewSet, basename="property")
+router.register(r"admin/users", AdminUserManagementViewSet, basename="admin-users")
 
 urlpatterns = [
     # Authentication URLs
-    path('api/auth/register/', UserRegistrationView.as_view(), name='user-register'),
-    path('api/auth/login/', UserLoginView.as_view(), name='user-login'),
-    path('api/auth/logout/', UserLogoutView.as_view(), name='user-logout'),
-    path('api/auth/user/', UserDetailView.as_view(), name='user-detail'),
-    
+    path("auth/register/", UserRegistrationView.as_view(), name="user-register"),
+    path("auth/login/", UserLoginView.as_view(), name="user-login"),
+    path("auth/logout/", UserLogoutView.as_view(), name="user-logout"),
+    path("auth/user/", UserDetailView.as_view(), name="user-detail"),
     # Customer Dashboard URLs
-    path('api/customer/saved-properties/', CustomerSavedPropertiesView.as_view(), name='customer-saved-properties'),
-    path('api/customer/saved-properties/create/', CustomerSavedPropertyCreateView.as_view(), name='customer-saved-properties-create'),
-    path('api/customer/inquiries/', CustomerInquiriesView.as_view(), name='customer-inquiries'),
-    path('api/customer/inquiries/create/', CustomerInquiryCreateView.as_view(), name='customer-inquiries-create'),
-    path('api/customer/visits/', CustomerVisitsView.as_view(), name='customer-visits'),
-    path('api/customer/visits/create/', CustomerVisitCreateView.as_view(), name='customer-visits-create'),
-    
+    path(
+        "customer/saved-properties/",
+        CustomerSavedPropertiesView.as_view(),
+        name="customer-saved-properties",
+    ),
+    path(
+        "customer/saved-properties/create/",
+        CustomerSavedPropertyCreateView.as_view(),
+        name="customer-saved-properties-create",
+    ),
+    path(
+        "customer/inquiries/",
+        CustomerInquiriesView.as_view(),
+        name="customer-inquiries",
+    ),
+    path(
+        "customer/inquiries/create/",
+        CustomerInquiryCreateView.as_view(),
+        name="customer-inquiries-create",
+    ),
+    path("customer/visits/", CustomerVisitsView.as_view(), name="customer-visits"),
+    path(
+        "customer/visits/create/",
+        CustomerVisitCreateView.as_view(),
+        name="customer-visits-create",
+    ),
     # Property Alerts URLs
-    path('api/customer/alerts/', PropertyAlertListCreateView.as_view(), name='property-alerts'),
-    path('api/customer/alerts/<int:pk>/', PropertyAlertDetailView.as_view(), name='property-alert-detail'),
-    
+    path(
+        "customer/alerts/",
+        PropertyAlertListCreateView.as_view(),
+        name="property-alerts",
+    ),
+    path(
+        "customer/alerts/<int:pk>/",
+        PropertyAlertDetailView.as_view(),
+        name="property-alert-detail",
+    ),
     # Admin Dashboard URLs
-    path('api/admin/analytics/', AdminAnalyticsView.as_view(), name='admin-analytics'),
-    
+    path("admin/analytics/", AdminAnalyticsView.as_view(), name="admin-analytics"),
     # Content Management URLs
-    path('api/property-types/', PropertyTypeListView.as_view(), name='property-types'),
-    path('api/organization/', OrganizationDetailView.as_view(), name='organization-detail'),
-    path('api/services/', ServiceListView.as_view(), name='services'),
-    path('api/hero-slides/', HeroSlideListView.as_view(), name='hero-slides'),
-    path('api/journey-steps/', JourneyStepListView.as_view(), name='journey-steps'),
-    path('api/about-us/', AboutUsDetailView.as_view(), name='about-us'),
-    
+    path("property-types/", PropertyTypeListView.as_view(), name="property-types"),
+    path("organization/", OrganizationDetailView.as_view(), name="organization-detail"),
+    path("services/", ServiceListView.as_view(), name="services"),
+    path("hero-slides/", HeroSlideListView.as_view(), name="hero-slides"),
+    path("journey-steps/", JourneyStepListView.as_view(), name="journey-steps"),
+    path("about-us/", AboutUsDetailView.as_view(), name="about-us"),
+    path("team/", TeamViewSet.as_view(), name="team"),
     # Include router URLs
-    path('api/', include(router.urls)),
+    path("", include(router.urls)),
 ]
