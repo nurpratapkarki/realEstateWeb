@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 from django.core.validators import RegexValidator
 from django.utils import timezone
 
@@ -16,17 +16,17 @@ class UserManager(BaseUserManager):
         user.set_password(password)
         user.save(using=self._db)
         return user
-    
+
     def create_superuser(self, username, email, password=None, **extra_fields):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
         extra_fields.setdefault('is_active', True)
-        
+
         if extra_fields.get('is_staff') is not True:
             raise ValueError('Superuser must have is_staff=True.')
         if extra_fields.get('is_superuser') is not True:
             raise ValueError('Superuser must have is_superuser=True.')
-        
+
         return self.create_user(username, email, password, **extra_fields)
 
 
@@ -36,29 +36,30 @@ class User(AbstractBaseUser, PermissionsMixin):
     first_name = models.CharField(max_length=30, blank=True)
     last_name = models.CharField(max_length=30, blank=True)
     phone_number = models.CharField(
-        max_length=15,
+        max_length=15, 
+        blank=True,
         validators=[RegexValidator(r'^\+?1?\d{9,15}$', 'Enter a valid phone number.')]
     )
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
-    
+
     objects = UserManager()
-    
+
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = ['email']
-    
+
     class Meta:
         db_table = 'auth_user'
         verbose_name = 'User'
         verbose_name_plural = 'Users'
-    
+
     def __str__(self):
         return self.username
-    
+
     def get_full_name(self):
         return f"{self.first_name} {self.last_name}".strip()
-    
+
     def get_short_name(self):
         return self.first_name
 
@@ -83,279 +84,227 @@ class Organization(models.Model):
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         verbose_name = 'Organization'
         verbose_name_plural = 'Organizations'
-    
+
     def __str__(self):
         return self.name
 
 
-class AboutUs(models.Model):
-    title = models.CharField(max_length=100)
-    content = models.TextField()
-    image = models.ImageField(upload_to='about_images/', blank=True, null=True)
-    vision = models.TextField(blank=True, null=True)
-    mission = models.TextField(blank=True, null=True)
-    
-    # Timestamps
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
-    class Meta:
-        verbose_name = 'About Us'
-        verbose_name_plural = 'About Us'
-    
-    def __str__(self):
-        return self.title
-
-
-class Achievements(models.Model):
-    properties_sold = models.IntegerField(default=0, help_text="Number of properties sold")
-    sales_volume = models.DecimalField(
-        max_digits=12, 
-        decimal_places=2, 
-        default=0.00,
-        help_text="Total sales volume in currency"
-    )
-    experience_years = models.IntegerField(default=0, help_text="Years of experience")
-    clients_served = models.IntegerField(default=0, help_text="Number of clients served")
-    
-    # Timestamps
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
-    class Meta:
-        verbose_name = 'Achievement'
-        verbose_name_plural = 'Achievements'
-    
-    def __str__(self):
-        return f"Achievements: {self.properties_sold} properties sold, ${self.sales_volume} sales volume"
-
-
-class Service(models.Model):
-    name = models.CharField(max_length=100)
-    title = models.CharField(max_length=200)
-    description = models.TextField(blank=True, null=True)
-    features = models.TextField(help_text="Features of the service, separated by commas")
-    image = models.ImageField(upload_to='service_images/', blank=True, null=True)
-    is_active = models.BooleanField(default=True)
-    
-    # Timestamps
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
-    class Meta:
-        verbose_name = 'Service'
-        verbose_name_plural = 'Services'
-        ordering = ['name']
-    
-    def __str__(self):
-        return self.name
-    
-    def get_features_list(self):
-        return [feature.strip() for feature in self.features.split(',') if feature.strip()]
-
-
-class Journey(models.Model):
-    year = models.IntegerField()
-    title = models.CharField(max_length=200, blank=True, null=True)
-    description = models.TextField()
-    
-    # Timestamps
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
-    class Meta:
-        verbose_name = 'Journey'
-        verbose_name_plural = 'Journey'
-        ordering = ['-year']
-    
-    def __str__(self):
-        return f"{self.year} - {self.title or 'Journey Item'}"
-
-
-class HeroSection(models.Model):
-    title = models.CharField(max_length=100)
-    subtitle = models.CharField(max_length=200)
-    description = models.TextField(blank=True, null=True)
-    image = models.ImageField(upload_to='hero_images/', blank=True, null=True)
-    button_text = models.CharField(max_length=50)
-    button_link = models.URLField()
-    is_active = models.BooleanField(default=True)
-    
-    # Timestamps
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
-    class Meta:
-        verbose_name = 'Hero Section'
-        verbose_name_plural = 'Hero Sections'
-    
-    def __str__(self):
-        return self.title
-
-
+# Property Management Models
 class PropertyType(models.Model):
-    name = models.CharField(max_length=100, unique=True)
-    description = models.TextField(blank=True, null=True)
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
-    
-    # Timestamps
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         verbose_name = 'Property Type'
         verbose_name_plural = 'Property Types'
-        ordering = ['name']
-    
+
     def __str__(self):
         return self.name
 
 
 class Property(models.Model):
-    STATUS_CHOICES = [
-        ('available', 'Available'),
-        ('sold', 'Sold'),
-        ('pending', 'Pending'),
-        ('off_market', 'Off Market'),
-    ]
-    
     title = models.CharField(max_length=200)
     description = models.TextField()
+    property_type = models.ForeignKey(PropertyType, on_delete=models.CASCADE)
     price = models.DecimalField(max_digits=12, decimal_places=2)
-    location = models.CharField(max_length=255)
-    bedrooms = models.IntegerField(default=0)
-    bathrooms = models.IntegerField(default=0)
-    area = models.DecimalField(
-        max_digits=10, 
-        decimal_places=2, 
-        help_text="Area in square feet"
-    )
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='available')
-    image = models.ImageField(upload_to='property_images/', blank=True, null=True)
-    property_type = models.ForeignKey(
-        PropertyType, 
-        on_delete=models.CASCADE, 
-        related_name='properties'
-    )
+    bedrooms = models.IntegerField()
+    bathrooms = models.IntegerField()
+    area = models.DecimalField(max_digits=10, decimal_places=2)
+    location = models.CharField(max_length=200)
+    address = models.TextField()
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     is_featured = models.BooleanField(default=False)
-    
-    # Timestamps
+    is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         verbose_name = 'Property'
         verbose_name_plural = 'Properties'
-        ordering = ['-created_at']
-    
+
     def __str__(self):
         return self.title
-    
-    @property
-    def is_available(self):
-        return self.status == 'available'
 
 
+class PropertyImage(models.Model):
+    property = models.ForeignKey(Property, related_name='images', on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='properties/')
+    is_primary = models.BooleanField(default=False)
+    order = models.IntegerField(default=0)
+
+    class Meta:
+        verbose_name = 'Property Image'
+        verbose_name_plural = 'Property Images'
+        ordering = ['order']
+
+    def __str__(self):
+        return f"Image for {self.property.title}"
+
+
+# Agent Management
 class Agent(models.Model):
-    name = models.CharField(max_length=100)
-    specialties = models.CharField(
-        max_length=200, 
-        help_text="Specialties of the agent, separated by commas"
-    )
-    email = models.EmailField(blank=True, null=True)
-    bio = models.TextField(blank=True, null=True)
-    phone = models.CharField(max_length=15, blank=True, null=True)
-    profile_picture = models.ImageField(upload_to='agent_profiles/', blank=True, null=True)
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    specializations = models.ManyToManyField(PropertyType, blank=True)
+    experience_years = models.IntegerField(default=0)
+    license_number = models.CharField(max_length=100, blank=True)
     is_active = models.BooleanField(default=True)
-    
-    # Timestamps
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         verbose_name = 'Agent'
         verbose_name_plural = 'Agents'
-        ordering = ['name']
-    
+
     def __str__(self):
-        return self.name
-    
-    def get_specialties_list(self):
-        return [specialty.strip() for specialty in self.specialties.split(',') if specialty.strip()]
+        return f"{self.user.get_full_name()} - Agent"
 
 
-class Contact(models.Model):
-    CONTACT_METHOD_CHOICES = [
-        ('email', 'Email'),
-        ('phone', 'Phone'),
-        ('whatsapp', 'WhatsApp'),
-        ('any', 'Any Method'),
-    ]
-    
+# Customer Interactions
+class PropertyInquiry(models.Model):
     STATUS_CHOICES = [
-        ('new', 'New'),
-        ('in_progress', 'In Progress'),
-        ('resolved', 'Resolved'),
-        ('closed', 'Closed'),
+        ('pending', 'Pending'),
+        ('responded', 'Responded'),
+        ('closed', 'Closed')
     ]
     
-    # Client Information
-    first_name = models.CharField(max_length=50)
-    last_name = models.CharField(max_length=50)
-    email = models.EmailField()
-    phone = models.CharField(
-        max_length=15,
-        validators=[RegexValidator(r'^\+?1?\d{9,15}$', 'Enter a valid phone number.')]
-    )
-    
-    # Contact Details
-    subject = models.CharField(max_length=200)
+    customer = models.ForeignKey(User, on_delete=models.CASCADE)
+    property = models.ForeignKey(Property, on_delete=models.CASCADE)
+    agent = models.ForeignKey(Agent, on_delete=models.CASCADE, null=True, blank=True)
     message = models.TextField()
-    preferred_contact_method = models.CharField(
-        max_length=20, 
-        choices=CONTACT_METHOD_CHOICES,
-        default='email'
-    )
-    
-    # Status and Management
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='new')
-    assigned_agent = models.ForeignKey(
-        Agent, 
-        on_delete=models.SET_NULL, 
-        null=True, 
-        blank=True,
-        related_name='assigned_contacts'
-    )
-    
-    # Timestamps
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
-        verbose_name = 'Contact'
-        verbose_name_plural = 'Contacts'
-        ordering = ['-created_at']
-    
+        verbose_name = 'Property Inquiry'
+        verbose_name_plural = 'Property Inquiries'
+
     def __str__(self):
-        return f"{self.first_name} {self.last_name} - {self.subject}"
+        return f"Inquiry for {self.property.title} by {self.customer.username}"
+
+
+class PropertyVisit(models.Model):
+    STATUS_CHOICES = [
+        ('scheduled', 'Scheduled'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled')
+    ]
     
-    def get_full_name(self):
-        return f"{self.first_name} {self.last_name}"
-class SaveProperty(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='saved_properties')
-    property = models.ForeignKey(Property, on_delete=models.CASCADE, related_name='saved_by_users')
-    saved_at = models.DateTimeField(auto_now_add=True)
+    customer = models.ForeignKey(User, on_delete=models.CASCADE)
+    property = models.ForeignKey(Property, on_delete=models.CASCADE)
+    agent = models.ForeignKey(Agent, on_delete=models.CASCADE)
+    scheduled_date = models.DateField()
+    scheduled_time = models.TimeField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='scheduled')
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        verbose_name = 'Property Visit'
+        verbose_name_plural = 'Property Visits'
+
+    def __str__(self):
+        return f"Visit to {self.property.title} on {self.scheduled_date}"
+
+
+class SavedProperty(models.Model):
+    customer = models.ForeignKey(User, on_delete=models.CASCADE)
+    property = models.ForeignKey(Property, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
-        unique_together = ('user', 'property')
+        unique_together = ['customer', 'property']
         verbose_name = 'Saved Property'
         verbose_name_plural = 'Saved Properties'
-    
+
     def __str__(self):
-        return f"{self.user.username} saved {self.property.title}"
-    def get_property(self):
-        return self.property
+        return f"{self.customer.username} saved {self.property.title}"
+
+
+# Content Management
+class Service(models.Model):
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    icon = models.CharField(max_length=100)
+    is_active = models.BooleanField(default=True)
+    order = models.IntegerField(default=0)
+
+    class Meta:
+        verbose_name = 'Service'
+        verbose_name_plural = 'Services'
+        ordering = ['order']
+
+    def __str__(self):
+        return self.title
+
+
+class HeroSlide(models.Model):
+    title = models.CharField(max_length=200)
+    subtitle = models.CharField(max_length=300, blank=True)
+    image = models.ImageField(upload_to='hero/')
+    link_url = models.URLField(blank=True)
+    is_active = models.BooleanField(default=True)
+    order = models.IntegerField(default=0)
+
+    class Meta:
+        verbose_name = 'Hero Slide'
+        verbose_name_plural = 'Hero Slides'
+        ordering = ['order']
+
+    def __str__(self):
+        return self.title
+
+
+class JourneyStep(models.Model):
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    icon = models.CharField(max_length=100)
+    order = models.IntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = 'Journey Step'
+        verbose_name_plural = 'Journey Steps'
+        ordering = ['order']
+
+    def __str__(self):
+        return self.title
+
+
+class AboutUs(models.Model):
+    title = models.CharField(max_length=200)
+    content = models.TextField()
+    vision = models.TextField()
+    mission = models.TextField()
+    image1 = models.ImageField(upload_to='about/', blank=True)
+    image2 = models.ImageField(upload_to='about/', blank=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = 'About Us'
+        verbose_name_plural = 'About Us'
+
+    def __str__(self):
+        return self.title
+
+
+# Property Alerts
+class PropertyAlert(models.Model):
+    customer = models.ForeignKey(User, on_delete=models.CASCADE)
+    property_type = models.ForeignKey(PropertyType, on_delete=models.CASCADE, null=True, blank=True)
+    min_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    max_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    location = models.CharField(max_length=200, blank=True)
+    min_bedrooms = models.IntegerField(null=True, blank=True)
+    max_bedrooms = models.IntegerField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Property Alert'
+        verbose_name_plural = 'Property Alerts'
+
+    def __str__(self):
+        return f"Alert for {self.customer.username}"
