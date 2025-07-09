@@ -75,6 +75,8 @@ class UserLoginSerializer(serializers.Serializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
+    roles = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = (
@@ -88,6 +90,11 @@ class UserSerializer(serializers.ModelSerializer):
             "date_joined",
         )
         read_only_fields = ("id", "date_joined")
+
+    def get_roles(self, obj):
+        if obj.is_superuser or obj.is_staff:
+            return "admin"
+        return "customer"
 
 
 # Organization Serializers
