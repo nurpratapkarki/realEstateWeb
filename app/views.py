@@ -504,6 +504,14 @@ class AboutUsDetailView(generics.RetrieveAPIView):
         return AboutUs.objects.filter(is_active=True).first()
 
 
+class AgentListView(generics.ListAPIView):
+    """Get all active agents"""
+
+    queryset = Agent.objects.filter(is_active=True).order_by("user")
+    serializer_class = UserSerializer
+    # permission_classes = [permissions.AllowAny]
+
+
 # Property Alert Views
 class PropertyAlertListCreateView(generics.ListCreateAPIView):
     serializer_class = PropertyAlertSerializer
