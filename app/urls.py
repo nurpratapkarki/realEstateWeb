@@ -29,7 +29,9 @@ from .views import (
     PropertyAlertDetailView,
     TeamViewSet,
     AgentListView,
+    get_csrf_token,
 )
+
 
 # Router for ViewSets
 router = DefaultRouter()
@@ -38,6 +40,7 @@ router.register(r"admin/users", AdminUserManagementViewSet, basename="admin-user
 
 urlpatterns = [
     # Authentication URLs
+    path("api/csrf/", get_csrf_token, name="csrf"),
     path("auth/register/", UserRegistrationView.as_view(), name="user-register"),
     path("auth/login/", UserLoginView.as_view(), name="user-login"),
     path("auth/logout/", UserLogoutView.as_view(), name="user-logout"),

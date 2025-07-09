@@ -1,16 +1,3 @@
-from django.contrib.auth import login, logout
-from django.db.models import Count, Q
-from django.shortcuts import get_object_or_404
-from rest_framework import status, generics, viewsets, permissions
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated, IsAdminUser
-from rest_framework.authtoken.models import Token
-from django.contrib.auth import get_user_model
-from django.utils import timezone
-from datetime import datetime, timedelta
-
 from .models import (
     User,
     Organization,
@@ -56,6 +43,28 @@ from .serializers import (
     TeamSerializer,
     AgentSerializer,
 )
+from django.contrib.auth import login, logout
+from django.db.models import Count, Q
+from django.shortcuts import get_object_or_404
+from rest_framework import status, generics, viewsets, permissions
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework.authtoken.models import Token
+from django.contrib.auth import get_user_model
+from django.utils import timezone
+from datetime import datetime, timedelta
+from django.views.decorators.csrf import ensure_csrf_cookie
+from django.views.decorators.http import require_http_methods
+from django.middleware.csrf import get_token
+from django.http import JsonResponse
+
+
+@ensure_csrf_cookie
+def get_csrf_token(request):
+    return JsonResponse({"csrfToken": request.META.get("CSRF_COOKIE")})
+
 
 User = get_user_model()
 
