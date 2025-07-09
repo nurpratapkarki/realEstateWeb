@@ -255,7 +255,7 @@ class Service(models.Model):
 class HeroSlide(models.Model):
     title = models.CharField(max_length=200)
     subtitle = models.CharField(max_length=300, blank=True)
-    image = models.ImageField(upload_to="hero/")
+    image = models.ImageField(upload_to="hero/", blank=True)
     link_url = models.URLField(blank=True)
     is_active = models.BooleanField(default=True)
     order = models.IntegerField(default=0)
@@ -290,8 +290,8 @@ class AboutUs(models.Model):
     content = models.TextField()
     vision = models.TextField()
     mission = models.TextField()
-    image1 = models.ImageField(upload_to="about/", blank=True)
-    image2 = models.ImageField(upload_to="about/", blank=True)
+    about_image = models.ImageField(upload_to="about/", blank=True)
+    vision_image = models.ImageField(upload_to="about/", blank=True)
     is_active = models.BooleanField(default=True)
 
     class Meta:
