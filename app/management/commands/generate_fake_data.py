@@ -166,8 +166,8 @@ class Command(BaseCommand):
             content=fake.text(),
             vision=fake.text(),
             mission=fake.text(),
-            image1=get_fake_image("about1.jpg"),
-            image2=get_fake_image("about2.jpg"),
+            about_image=get_fake_image("about1.jpg"),
+            vision_image=get_fake_image("about2.jpg"),
             is_active=True,
         )
 
