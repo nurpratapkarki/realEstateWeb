@@ -16,6 +16,7 @@ from app.models import (
     JourneyStep,
     AboutUs,
     PropertyAlert,
+    Team,
 )
 from faker import Faker
 from django.core.files.base import ContentFile
@@ -62,10 +63,10 @@ class Command(BaseCommand):
             org = Organization.objects.create(
                 name=fake.company(),
                 description=fake.text(),
-                phone=fake.phone_number(),
+                phone=fake.numerify(text="+1##########"),
                 email=fake.company_email(),
                 address=fake.address(),
-                whatsapp=fake.phone_number(),
+                whatsapp=fake.numerify(text="+1##########"),
                 facebook=fake.url(),
                 instagram=fake.url(),
                 linkedin=fake.url(),
@@ -83,7 +84,7 @@ class Command(BaseCommand):
                 password="password123",
                 first_name=fake.first_name(),
                 last_name=fake.last_name(),
-                phone_number=fake.phone_number(),
+                phone_number=fake.numerify(text="+1##########"),
             )
             users.append(user)
             # Make some users agents
@@ -170,7 +171,17 @@ class Command(BaseCommand):
             is_active=True,
         )
 
-        # 9. Property Inquiries
+        # 9. Team Members
+        for _ in range(6):
+            Team.objects.create(
+                name=fake.name(),
+                bio=fake.text(max_nb_chars=200),
+                position=fake.job(),
+                email=fake.email(),
+                image=get_fake_image("team_member.jpg"),
+            )
+
+        # 10. Property Inquiries
         for _ in range(10):
             PropertyInquiry.objects.create(
                 customer=random.choice(users),
@@ -180,7 +191,7 @@ class Command(BaseCommand):
                 status=random.choice(["pending", "responded", "closed"]),
             )
 
-        # 10. Property Visits
+        # 11. Property Visits
         for _ in range(10):
             PropertyVisit.objects.create(
                 customer=random.choice(users),
@@ -192,7 +203,7 @@ class Command(BaseCommand):
                 notes=fake.sentence(),
             )
 
-        # 11. Saved Properties
+        # 12. Saved Properties
         for _ in range(15):
             try:
                 SavedProperty.objects.create(
@@ -201,7 +212,7 @@ class Command(BaseCommand):
             except:
                 pass  # Ignore duplicates
 
-        # 12. Property Alerts
+        # 13. Property Alerts
         for _ in range(8):
             PropertyAlert.objects.create(
                 customer=random.choice(users),
