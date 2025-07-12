@@ -1,45 +1,47 @@
 from rest_framework import serializers
-from django.contrib.auth import authenticate
+from django.contrib.auth import authenticate, get_user_model
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 from .models import (
-    User, Organization, AboutUs, Achievements, Service, Journey,
-    HeroSection, PropertyType, Property, Agent, Contact
+    User, Organization, PropertyType, Property, PropertyImage, Agent,
+    PropertyInquiry, PropertyVisit, SavedProperty, Service, HeroSlide,
+    JourneyStep, AboutUs, PropertyAlert
 )
 
-
-class UserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'is_active', 'date_joined']
-        read_only_fields = ['id', 'date_joined']
+User = get_user_model()
 
 
+# Authentication Serializers
 class UserRegistrationSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, min_length=8)
+    password = serializers.CharField(write_only=True, validators=[validate_password])
     password_confirm = serializers.CharField(write_only=True)
-    
+
     class Meta:
         model = User
-        fields = ['username', 'email', 'password', 'password_confirm', 'first_name', 'last_name']
-    
+        fields = ('username', 'email', 'first_name', 'last_name', 'phone_number', 'password', 'password_confirm')
+
     def validate(self, attrs):
         if attrs['password'] != attrs['password_confirm']:
             raise serializers.ValidationError("Passwords don't match")
         return attrs
-    
+
     def create(self, validated_data):
         validated_data.pop('password_confirm')
+        password = validated_data.pop('password')
         user = User.objects.create_user(**validated_data)
+        user.set_password(password)
+        user.save()
         return user
 
 
 class UserLoginSerializer(serializers.Serializer):
     username = serializers.CharField()
-    password = serializers.CharField()
-    
+    password = serializers.CharField(write_only=True)
+
     def validate(self, attrs):
         username = attrs.get('username')
         password = attrs.get('password')
-        
+
         if username and password:
             user = authenticate(username=username, password=password)
             if not user:
@@ -48,14 +50,153 @@ class UserLoginSerializer(serializers.Serializer):
                 raise serializers.ValidationError('User account is disabled')
             attrs['user'] = user
         else:
-            raise serializers.ValidationError('Must include username and password')
-        
+            raise serializers.ValidationError('Must provide username and password')
         return attrs
 
 
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ('id', 'username', 'email', 'first_name', 'last_name', 'phone_number', 'is_active', 'date_joined')
+        read_only_fields = ('id', 'date_joined')
+
+
+# Organization Serializers
 class OrganizationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Organization
+        fields = '__all__'
+
+
+# Property Serializers
+class PropertyTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PropertyType
+        fields = '__all__'
+
+
+class PropertyImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PropertyImage
+        fields = ('id', 'image', 'is_primary', 'order')
+
+
+class PropertySerializer(serializers.ModelSerializer):
+    images = PropertyImageSerializer(many=True, read_only=True)
+    property_type_name = serializers.CharField(source='property_type.name', read_only=True)
+
+    class Meta:
+        model = Property
+        fields = '__all__'
+        read_only_fields = ('created_at', 'updated_at')
+
+
+class PropertyDetailSerializer(serializers.ModelSerializer):
+    images = PropertyImageSerializer(many=True, read_only=True)
+    property_type = PropertyTypeSerializer(read_only=True)
+
+    class Meta:
+        model = Property
+        fields = '__all__'
+        read_only_fields = ('created_at', 'updated_at')
+
+
+class PropertyCreateUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Property
+        fields = '__all__'
+        read_only_fields = ('created_at', 'updated_at')
+
+
+# Agent Serializers
+class AgentSerializer(serializers.ModelSerializer):
+    user_details = UserSerializer(source='user', read_only=True)
+    specializations = PropertyTypeSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Agent
+        fields = '__all__'
+
+
+# Customer Interaction Serializers
+class PropertyInquirySerializer(serializers.ModelSerializer):
+    customer_details = UserSerializer(source='customer', read_only=True)
+    property_details = PropertySerializer(source='property', read_only=True)
+    agent_details = AgentSerializer(source='agent', read_only=True)
+
+    class Meta:
+        model = PropertyInquiry
+        fields = '__all__'
+        read_only_fields = ('created_at',)
+
+
+class PropertyInquiryCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PropertyInquiry
+        fields = ('property', 'agent', 'message')
+
+    def create(self, validated_data):
+        validated_data['customer'] = self.context['request'].user
+        validated_data['status'] = 'pending'
+        return super().create(validated_data)
+
+
+class PropertyVisitSerializer(serializers.ModelSerializer):
+    customer_details = UserSerializer(source='customer', read_only=True)
+    property_details = PropertySerializer(source='property', read_only=True)
+    agent_details = AgentSerializer(source='agent', read_only=True)
+
+    class Meta:
+        model = PropertyVisit
+        fields = '__all__'
+
+
+class PropertyVisitCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PropertyVisit
+        fields = ('property', 'agent', 'scheduled_date', 'scheduled_time', 'notes')
+
+    def create(self, validated_data):
+        validated_data['customer'] = self.context['request'].user
+        validated_data['status'] = 'scheduled'
+        return super().create(validated_data)
+
+
+class SavedPropertySerializer(serializers.ModelSerializer):
+    property_details = PropertySerializer(source='property', read_only=True)
+
+    class Meta:
+        model = SavedProperty
+        fields = '__all__'
+        read_only_fields = ('customer', 'created_at')
+
+
+class SavedPropertyCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SavedProperty
+        fields = ('property',)
+
+    def create(self, validated_data):
+        validated_data['customer'] = self.context['request'].user
+        return super().create(validated_data)
+
+
+# Content Management Serializers
+class ServiceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Service
+        fields = '__all__'
+
+
+class HeroSlideSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = HeroSlide
+        fields = '__all__'
+
+
+class JourneyStepSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = JourneyStep
         fields = '__all__'
 
 
@@ -65,119 +206,64 @@ class AboutUsSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class AchievementsSerializer(serializers.ModelSerializer):
+# Property Alert Serializers
+class PropertyAlertSerializer(serializers.ModelSerializer):
+    customer_details = UserSerializer(source='customer', read_only=True)
+    property_type_details = PropertyTypeSerializer(source='property_type', read_only=True)
+
     class Meta:
-        model = Achievements
+        model = PropertyAlert
         fields = '__all__'
+        read_only_fields = ('customer', 'created_at')
 
 
-class ServiceSerializer(serializers.ModelSerializer):
-    features_list = serializers.ReadOnlyField(source='get_features_list')
-    
+class PropertyAlertCreateSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Service
-        fields = '__all__'
+        model = PropertyAlert
+        fields = ('property_type', 'min_price', 'max_price', 'location', 'min_bedrooms', 'max_bedrooms')
+
+    def create(self, validated_data):
+        validated_data['customer'] = self.context['request'].user
+        return super().create(validated_data)
 
 
-class JourneySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Journey
-        fields = '__all__'
-
-
-class HeroSectionSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = HeroSection
-        fields = '__all__'
-
-
-class PropertyTypeSerializer(serializers.ModelSerializer):
-    properties_count = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = PropertyType
-        fields = '__all__'
-    
-    def get_properties_count(self, obj):
-        return obj.properties.filter(status='available').count()
-
-
-class PropertySerializer(serializers.ModelSerializer):
-    property_type_name = serializers.CharField(source='property_type.name', read_only=True)
-    is_available = serializers.ReadOnlyField()
-    
-    class Meta:
-        model = Property
-        fields = '__all__'
-
-
-class PropertyListSerializer(serializers.ModelSerializer):
-    property_type_name = serializers.CharField(source='property_type.name', read_only=True)
-    
-    class Meta:
-        model = Property
-        fields = [
-            'id', 'title', 'price', 'location', 'bedrooms', 'bathrooms', 
-            'area', 'status', 'image', 'property_type_name', 'is_featured', 'created_at'
-        ]
-
-
-class AgentSerializer(serializers.ModelSerializer):
-    specialties_list = serializers.ReadOnlyField(source='get_specialties_list')
-    username = serializers.CharField(source='user.username', read_only=True)
-    
-    class Meta:
-        model = Agent
-        fields = '__all__'
-
-
-class ContactSerializer(serializers.ModelSerializer):
-    full_name = serializers.ReadOnlyField(source='get_full_name')
-    assigned_agent_name = serializers.CharField(source='assigned_agent.name', read_only=True)
-    
-    class Meta:
-        model = Contact
-        fields = '__all__'
-        read_only_fields = ['status', 'assigned_agent', 'created_at', 'updated_at']
-
-
-class ContactCreateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Contact
-        fields = [
-            'first_name', 'last_name', 'email', 'phone', 'subject', 
-            'message', 'preferred_contact_method'
-        ]
-    
-    def validate_email(self, value):
-        # Additional email validation if needed
-        return value.lower()
-
-
-class ContactUpdateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Contact
-        fields = ['status', 'assigned_agent']
-
-
-# Dashboard/Stats Serializers
-class PropertyStatsSerializer(serializers.Serializer):
+# Admin Analytics Serializers
+class AdminAnalyticsSerializer(serializers.Serializer):
     total_properties = serializers.IntegerField()
-    available_properties = serializers.IntegerField()
-    sold_properties = serializers.IntegerField()
-    pending_properties = serializers.IntegerField()
-    featured_properties = serializers.IntegerField()
-
-
-class ContactStatsSerializer(serializers.Serializer):
-    total_contacts = serializers.IntegerField()
-    new_contacts = serializers.IntegerField()
-    in_progress_contacts = serializers.IntegerField()
-    resolved_contacts = serializers.IntegerField()
-
-
-class DashboardStatsSerializer(serializers.Serializer):
-    property_stats = PropertyStatsSerializer()
-    contact_stats = ContactStatsSerializer()
+    active_properties = serializers.IntegerField()
+    total_users = serializers.IntegerField()
     total_agents = serializers.IntegerField()
-    total_services = serializers.IntegerField()
+    total_inquiries = serializers.IntegerField()
+    pending_inquiries = serializers.IntegerField()
+    scheduled_visits = serializers.IntegerField()
+    recent_properties = PropertySerializer(many=True)
+    recent_inquiries = PropertyInquirySerializer(many=True)
+
+
+# User Management Serializers (for admin)
+class UserManagementSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ('id', 'username', 'email', 'first_name', 'last_name', 'phone_number', 'is_active', 'is_staff', 'date_joined')
+        read_only_fields = ('id', 'date_joined')
+
+
+class UserCreateSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, validators=[validate_password])
+
+    class Meta:
+        model = User
+        fields = ('username', 'email', 'first_name', 'last_name', 'phone_number', 'password', 'is_active', 'is_staff')
+
+    def create(self, validated_data):
+        password = validated_data.pop('password')
+        user = User.objects.create_user(**validated_data)
+        user.set_password(password)
+        user.save()
+        return user
+
+
+class UserUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ('username', 'email', 'first_name', 'last_name', 'phone_number', 'is_active', 'is_staff')

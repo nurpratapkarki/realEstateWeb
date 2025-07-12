@@ -22,12 +22,13 @@ from django.conf.urls.static import static
 from django.views.static import serve as dev_serve_media
 
 urlpatterns = [
-    path('api/', include('app.urls')),
+    path('', include('app.urls')),
+
 ]
 
 if settings.DEBUG:
     urlpatterns += [
-        re_path(r'^media/(?P<path>.*)$', dev_serve_media, name='media'),
+        re_path(r'^media/(?P<path>.*)$', dev_serve_media, {'document_root': settings.MEDIA_ROOT}, name='media'),
     ]
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 urlpatterns += [

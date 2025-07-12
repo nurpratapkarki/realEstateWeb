@@ -1,55 +1,64 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from . import views
+from .views import (
+    # Authentication Views
+    UserRegistrationView, UserLoginView, UserLogoutView, UserDetailView,
+    
+    # Property Views
+    PropertyViewSet,
+    
+    # Customer Dashboard Views
+    CustomerSavedPropertiesView, CustomerSavedPropertyCreateView,
+    CustomerInquiriesView, CustomerInquiryCreateView,
+    CustomerVisitsView, CustomerVisitCreateView,
+    
+    # Admin Dashboard Views
+    AdminAnalyticsView, AdminUserManagementViewSet,
+    
+    # Additional Views
+    PropertyTypeListView, OrganizationDetailView, ServiceListView,
+    HeroSlideListView, JourneyStepListView, AboutUsDetailView, AgentListView,
+    PropertyAlertListCreateView, PropertyAlertDetailView
+)
 
-# Create a router for ViewSets
+# Router for ViewSets
 router = DefaultRouter()
-router.register(r'organizations', views.OrganizationViewSet)
-router.register(r'about-us', views.AboutUsViewSet)
-router.register(r'achievements', views.AchievementsViewSet)
-router.register(r'services', views.ServiceViewSet)
-router.register(r'journey', views.JourneyViewSet)
-router.register(r'hero-sections', views.HeroSectionViewSet)
-router.register(r'property-types', views.PropertyTypeViewSet)
-router.register(r'properties', views.PropertyViewSet)
-router.register(r'agents', views.AgentViewSet)
-router.register(r'contacts', views.ContactViewSet)
+router.register(r'properties', PropertyViewSet, basename='property')
+router.register(r'admin/users', AdminUserManagementViewSet, basename='admin-users')
 
-# Define URL patterns
 urlpatterns = [
     # Authentication URLs
-    path('auth/register/', views.UserRegistrationView.as_view(), name='user-register'),
-    path('auth/login/', views.UserLoginView.as_view(), name='user-login'),
-    path('auth/logout/', views.UserLogoutView.as_view(), name='user-logout'),
+    path('api/auth/register/', UserRegistrationView.as_view(), name='user-register'),
+    path('api/auth/login/', UserLoginView.as_view(), name='user-login'),
+    path('api/auth/logout/', UserLogoutView.as_view(), name='user-logout'),
+    path('api/auth/user/', UserDetailView.as_view(), name='user-detail'),
     
-    # Dashboard URLs
-    path('dashboard/stats/', views.DashboardStatsView.as_view(), name='dashboard-stats'),
+    # Customer Dashboard URLs
+    path('api/customer/saved-properties/', CustomerSavedPropertiesView.as_view(), name='customer-saved-properties'),
+    path('api/customer/saved-properties/create/', CustomerSavedPropertyCreateView.as_view(), name='customer-saved-properties-create'),
+    path('api/customer/inquiries/', CustomerInquiriesView.as_view(), name='customer-inquiries'),
+    path('api/customer/inquiries/create/', CustomerInquiryCreateView.as_view(), name='customer-inquiries-create'),
+    path('api/customer/visits/', CustomerVisitsView.as_view(), name='customer-visits'),
+    path('api/customer/visits/create/', CustomerVisitCreateView.as_view(), name='customer-visits-create'),
     
-    # Search URLs
-    path('search/', views.GlobalSearchView.as_view(), name='global-search'),
+    # Property Alerts URLs
+    path('api/customer/alerts/', PropertyAlertListCreateView.as_view(), name='property-alerts'),
+    path('api/customer/alerts/<int:pk>/', PropertyAlertDetailView.as_view(), name='property-alert-detail'),
     
-    # Public API URLs for Frontend
-    path('public/home/', views.home_page_data, name='home-page-data'),
-    path('public/about/', views.about_page_data, name='about-page-data'),
-    path('public/property-filters/', views.property_filters, name='property-filters'),
+    # Admin Dashboard URLs
+    path('api/admin/analytics/', AdminAnalyticsView.as_view(), name='admin-analytics'),
+    
+    # Content Management URLs
+    path('api/property-types/', PropertyTypeListView.as_view(), name='property-types'),
+    path('api/organization/', OrganizationDetailView.as_view(), name='organization-detail'),
+    path('api/services/', ServiceListView.as_view(), name='services'),
+    path('api/hero-slides/', HeroSlideListView.as_view(), name='hero-slides'),
+    path('api/journey-steps/', JourneyStepListView.as_view(), name='journey-steps'),
+    path('api/about-us/', AboutUsDetailView.as_view(), name='about-us'),
+    path('api/about/', AboutUsDetailView.as_view(), name='about'),
+    path('api/team/', AgentListView.as_view(), name='team'),
+    path('api/agents/', AgentListView.as_view(), name='agents'),
     
     # Include router URLs
-    path('', include(router.urls)),
+    path('api/', include(router.urls)),
 ]
-
-# URL patterns for main project urls.py
-"""
-from django.contrib import admin
-from django.urls import path, include
-from django.conf import settings
-from django.conf.urls.static import static
-
-urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('api/', include('your_app.urls')),  # Replace 'your_app' with your actual app name
-]
-
-# Serve media files during development
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-"""
