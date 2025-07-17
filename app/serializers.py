@@ -5,7 +5,8 @@ from django.core.exceptions import ValidationError
 from .models import (
     User, Organization, PropertyType, Property, PropertyImage, Agent,
     PropertyInquiry, PropertyVisit, SavedProperty, Service, HeroSlide,
-    JourneyStep, AboutUs, PropertyAlert
+    JourneyStep, AboutUs, PropertyAlert, Gallery, GalleryImage,
+    NewsCategory, News, Team, Contact, CustomerMessage, CustomerDocument
 )
 
 User = get_user_model()
@@ -18,7 +19,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('username', 'email', 'first_name', 'last_name', 'phone_number', 'password', 'password_confirm')
+        fields = ('username', 'email', 'first_name', 'last_name', 'phone_number', 'role', 'password', 'password_confirm')
 
     def validate(self, attrs):
         if attrs['password'] != attrs['password_confirm']:
@@ -55,10 +56,21 @@ class UserLoginSerializer(serializers.Serializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
+    roles = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'first_name', 'last_name', 'phone_number', 'is_active', 'date_joined')
-        read_only_fields = ('id', 'date_joined')
+        fields = ('id', 'username', 'email', 'first_name', 'last_name', 'phone_number', 'role', 'is_active', 'is_staff', 'is_superuser', 'date_joined', 'roles')
+        read_only_fields = ('id', 'date_joined', 'roles')
+
+    def get_roles(self, obj):
+        """Return user role from the role field, with fallback to staff/superuser check"""
+        if hasattr(obj, 'role') and obj.role:
+            return obj.role
+        # Fallback for existing users without role field
+        if obj.is_superuser or obj.is_staff:
+            return 'admin'
+        return 'customer'
 
 
 # Organization Serializers
@@ -84,6 +96,8 @@ class PropertyImageSerializer(serializers.ModelSerializer):
 class PropertySerializer(serializers.ModelSerializer):
     images = PropertyImageSerializer(many=True, read_only=True)
     property_type_name = serializers.CharField(source='property_type.name', read_only=True)
+    formatted_area = serializers.ReadOnlyField()
+    area_in_sqft = serializers.ReadOnlyField()
 
     class Meta:
         model = Property
@@ -94,6 +108,8 @@ class PropertySerializer(serializers.ModelSerializer):
 class PropertyDetailSerializer(serializers.ModelSerializer):
     images = PropertyImageSerializer(many=True, read_only=True)
     property_type = PropertyTypeSerializer(read_only=True)
+    formatted_area = serializers.ReadOnlyField()
+    area_in_sqft = serializers.ReadOnlyField()
 
     class Meta:
         model = Property
@@ -110,8 +126,9 @@ class PropertyCreateUpdateSerializer(serializers.ModelSerializer):
 
 # Agent Serializers
 class AgentSerializer(serializers.ModelSerializer):
-    user_details = UserSerializer(source='user', read_only=True)
     specializations = PropertyTypeSerializer(many=True, read_only=True)
+    full_name = serializers.ReadOnlyField()
+    specialization_names = serializers.ReadOnlyField()
 
     class Meta:
         model = Agent
@@ -257,6 +274,13 @@ class UserCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         password = validated_data.pop('password')
+
+        # Set role based on is_staff flag
+        if validated_data.get('is_staff', False):
+            validated_data['role'] = 'admin'
+        else:
+            validated_data['role'] = 'customer'
+
         user = User.objects.create_user(**validated_data)
         user.set_password(password)
         user.save()
@@ -267,3 +291,148 @@ class UserUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('username', 'email', 'first_name', 'last_name', 'phone_number', 'is_active', 'is_staff')
+
+    def update(self, instance, validated_data):
+        # Update role based on is_staff flag if it's being changed
+        if 'is_staff' in validated_data:
+            if validated_data['is_staff']:
+                validated_data['role'] = 'admin'
+            else:
+                validated_data['role'] = 'customer'
+
+        return super().update(instance, validated_data)
+
+
+# Gallery Serializers
+class GalleryImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GalleryImage
+        fields = '__all__'
+        read_only_fields = ('created_at',)
+
+
+class GallerySerializer(serializers.ModelSerializer):
+    images = GalleryImageSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Gallery
+        fields = '__all__'
+        read_only_fields = ('created_at', 'updated_at')
+
+
+# News Serializers
+class NewsCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = NewsCategory
+        fields = '__all__'
+        read_only_fields = ('created_at',)
+
+
+class NewsSerializer(serializers.ModelSerializer):
+    category_details = NewsCategorySerializer(source='category', read_only=True)
+
+    class Meta:
+        model = News
+        fields = '__all__'
+        read_only_fields = ('created_at', 'updated_at')
+
+
+# Team Serializers
+class TeamSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Team
+        fields = '__all__'
+        read_only_fields = ('created_at', 'updated_at')
+
+
+# Contact Serializers
+class ContactSerializer(serializers.ModelSerializer):
+    full_name = serializers.ReadOnlyField()
+    customer_details = UserSerializer(source='customer', read_only=True)
+
+    class Meta:
+        model = Contact
+        fields = '__all__'
+        read_only_fields = ('customer', 'created_at', 'updated_at')
+
+
+class ContactCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Contact
+        fields = ('first_name', 'last_name', 'email', 'phone', 'subject', 'message', 'preferred_contact')
+
+    def create(self, validated_data):
+        # If user is authenticated, associate the contact with the user
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            validated_data['customer'] = request.user
+
+        return super().create(validated_data)
+
+
+# Customer Messages Serializers
+class CustomerMessageSerializer(serializers.ModelSerializer):
+    agent_details = AgentSerializer(source='agent', read_only=True)
+    property_details = PropertySerializer(source='property', read_only=True)
+    sender_name = serializers.SerializerMethodField()
+    time_ago = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CustomerMessage
+        fields = '__all__'
+        read_only_fields = ('customer', 'created_at', 'updated_at')
+
+    def get_sender_name(self, obj):
+        if obj.is_from_customer:
+            return 'You'
+        elif obj.agent:
+            return f"{obj.agent.full_name} (Agent)"
+        else:
+            return 'System'
+
+    def get_time_ago(self, obj):
+        from django.utils import timezone
+        from datetime import timedelta
+
+        now = timezone.now()
+        diff = now - obj.created_at
+
+        if diff < timedelta(minutes=1):
+            return 'Just now'
+        elif diff < timedelta(hours=1):
+            minutes = int(diff.total_seconds() / 60)
+            return f"{minutes} minute{'s' if minutes != 1 else ''} ago"
+        elif diff < timedelta(days=1):
+            hours = int(diff.total_seconds() / 3600)
+            return f"{hours} hour{'s' if hours != 1 else ''} ago"
+        elif diff < timedelta(days=7):
+            days = diff.days
+            return f"{days} day{'s' if days != 1 else ''} ago"
+        else:
+            return obj.created_at.strftime('%b %d, %Y')
+
+
+class CustomerMessageCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomerMessage
+        fields = ('agent', 'property', 'subject', 'message')
+
+    def create(self, validated_data):
+        validated_data['customer'] = self.context['request'].user
+        validated_data['is_from_customer'] = True
+        return super().create(validated_data)
+
+
+# Customer Documents Serializers
+class CustomerDocumentSerializer(serializers.ModelSerializer):
+    property_details = PropertySerializer(source='property', read_only=True)
+    document_type_display = serializers.CharField(source='get_document_type_display', read_only=True)
+    downloaded_at = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CustomerDocument
+        fields = '__all__'
+        read_only_fields = ('customer', 'download_count', 'created_at', 'updated_at')
+
+    def get_downloaded_at(self, obj):
+        return obj.updated_at.strftime('%b %d, %Y')
