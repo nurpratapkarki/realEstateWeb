@@ -123,14 +123,33 @@ class Property(models.Model):
         ('kattha', 'Kattha (कट्ठा)'),
     ]
 
+    PURPOSE_CHOICES = [
+        ('land', 'Land (जग्गा)'),
+        ('rent', 'Rent (भाडा)'),
+    ]
+
     title = models.CharField(max_length=200)
     description = models.TextField()
     property_type = models.ForeignKey(PropertyType, on_delete=models.CASCADE)
-    price = models.DecimalField(max_digits=12, decimal_places=2)
-    bedrooms = models.IntegerField()
+    price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+
+    # Changed bedrooms to nullable and added property purpose (Land or Rent) - Optional
+    bedrooms = models.IntegerField(null=True, blank=True, help_text="Number of bedrooms (for rent properties)")
+    property_purpose = models.CharField(max_length=10, choices=PURPOSE_CHOICES, default='land', help_text="Property purpose - Land or Rent", blank=True, null=True)
+
     bathrooms = models.IntegerField()
-    area = models.DecimalField(max_digits=10, decimal_places=2, help_text="Area in selected unit")
-    area_unit = models.CharField(max_length=10, choices=AREA_UNIT_CHOICES, default='aana', help_text="Unit of area measurement")
+    area = models.DecimalField(max_digits=10, decimal_places=2, help_text="Area in selected unit", null=True, blank=True)
+    area_unit = models.CharField(max_length=10, choices=AREA_UNIT_CHOICES, default='aana', help_text="Unit of area measurement", blank=True, null=True)
+
+    # Sophisticated land area system (Ropani-Aana-Paisa-Daam)
+    land_ropani = models.IntegerField(null=True, blank=True, help_text="Ropani (रोपनी)")
+    land_aana = models.IntegerField(null=True, blank=True, help_text="Aana (आना)")
+    land_paisa = models.IntegerField(null=True, blank=True, help_text="Paisa (पैसा)")
+    land_daam = models.IntegerField(null=True, blank=True, help_text="Daam (दाम)")
+
+    # Google Maps embed functionality
+    google_maps_embed_url = models.TextField(null=True, blank=True, help_text="Google Maps embed URL or iframe code")
+
     location = models.CharField(max_length=200)
     address = models.TextField()
     latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
@@ -154,6 +173,38 @@ class Property(models.Model):
         return f"{self.area} {unit_display}"
 
     @property
+    def purpose_display(self):
+        """Return human-readable purpose"""
+        return dict(self.PURPOSE_CHOICES).get(self.property_purpose, self.property_purpose)
+
+    @property
+    def formatted_land_area(self):
+        """Return formatted land area in Ropani-Aana-Paisa-Daam format"""
+        if any([self.land_ropani, self.land_aana, self.land_paisa, self.land_daam]):
+            ropani = self.land_ropani or 0
+            aana = self.land_aana or 0
+            paisa = self.land_paisa or 0
+            daam = self.land_daam or 0
+            return f"{ropani}-{aana}-{paisa}-{daam}"
+        return None
+
+    @property
+    def land_area_display(self):
+        """Return human-readable land area"""
+        if any([self.land_ropani, self.land_aana, self.land_paisa, self.land_daam]):
+            parts = []
+            if self.land_ropani:
+                parts.append(f"{self.land_ropani} Ropani")
+            if self.land_aana:
+                parts.append(f"{self.land_aana} Aana")
+            if self.land_paisa:
+                parts.append(f"{self.land_paisa} Paisa")
+            if self.land_daam:
+                parts.append(f"{self.land_daam} Daam")
+            return ", ".join(parts)
+        return None
+
+    @property
     def area_in_sqft(self):
         """Convert area to square feet for calculations"""
         conversion_rates = {
@@ -164,6 +215,20 @@ class Property(models.Model):
             'kattha': 3645,  # 20 dhur
         }
         return float(self.area) * conversion_rates.get(self.area_unit, 1)
+
+    @property
+    def google_maps_embed_src(self):
+        """Extract src URL from Google Maps embed iframe"""
+        if self.google_maps_embed_url:
+            # Extract src from iframe if full iframe is provided
+            if 'iframe' in self.google_maps_embed_url.lower():
+                import re
+                src_match = re.search(r'src="([^"]*)"', self.google_maps_embed_url)
+                if src_match:
+                    return src_match.group(1)
+            # Return as is if it's already a URL
+            return self.google_maps_embed_url
+        return None
 
 
 class PropertyImage(models.Model):

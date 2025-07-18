@@ -90,13 +90,17 @@ class PropertyTypeSerializer(serializers.ModelSerializer):
 class PropertyImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = PropertyImage
-        fields = ('id', 'image', 'is_primary', 'order')
+        fields = ('id', 'image', 'property', 'is_primary', 'order')
 
 
 class PropertySerializer(serializers.ModelSerializer):
     images = PropertyImageSerializer(many=True, read_only=True)
     property_type_name = serializers.CharField(source='property_type.name', read_only=True)
     formatted_area = serializers.ReadOnlyField()
+    formatted_land_area = serializers.ReadOnlyField()
+    land_area_display = serializers.ReadOnlyField()
+    google_maps_embed_src = serializers.ReadOnlyField()
+    purpose_display = serializers.ReadOnlyField()
     area_in_sqft = serializers.ReadOnlyField()
 
     class Meta:
@@ -109,6 +113,10 @@ class PropertyDetailSerializer(serializers.ModelSerializer):
     images = PropertyImageSerializer(many=True, read_only=True)
     property_type = PropertyTypeSerializer(read_only=True)
     formatted_area = serializers.ReadOnlyField()
+    formatted_land_area = serializers.ReadOnlyField()
+    land_area_display = serializers.ReadOnlyField()
+    google_maps_embed_src = serializers.ReadOnlyField()
+    purpose_display = serializers.ReadOnlyField()
     area_in_sqft = serializers.ReadOnlyField()
 
     class Meta:

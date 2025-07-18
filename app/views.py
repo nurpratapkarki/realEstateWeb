@@ -1,11 +1,13 @@
 from django.contrib.auth import login, logout
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 from rest_framework import status, generics, viewsets, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework.permissions import IsAuthenticated, IsAdminUser, BasePermission
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import get_user_model
@@ -21,7 +23,7 @@ from .models import (
 from .serializers import (
     UserRegistrationSerializer, UserLoginSerializer, UserSerializer,
     PropertySerializer, PropertyDetailSerializer, PropertyCreateUpdateSerializer,
-    SavedPropertySerializer, SavedPropertyCreateSerializer,
+    PropertyImageSerializer, SavedPropertySerializer, SavedPropertyCreateSerializer,
     PropertyInquirySerializer, PropertyInquiryCreateSerializer,
     PropertyVisitSerializer, PropertyVisitCreateSerializer,
     AdminAnalyticsSerializer, UserManagementSerializer, UserCreateSerializer, UserUpdateSerializer,
@@ -34,6 +36,24 @@ from .serializers import (
 )
 
 User = get_user_model()
+
+
+# Custom Permission Classes
+class IsAdminRole(BasePermission):
+    """
+    Custom permission to check if user has admin role.
+    Checks both the custom role field and Django's is_staff/is_superuser.
+    """
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+
+        # Check custom role field
+        if hasattr(request.user, 'role') and request.user.role == 'admin':
+            return True
+
+        # Fallback to Django's built-in admin checks
+        return request.user.is_staff or request.user.is_superuser
 
 
 # Authentication Views
@@ -105,10 +125,12 @@ class PropertyViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
-            permission_classes = [IsAdminUser]
+            permission_classes = [IsAdminRole]
         else:
             permission_classes = [permissions.AllowAny]
         return [permission() for permission in permission_classes]
+
+
 
     def get_queryset(self):
         queryset = Property.objects.filter(is_active=True).select_related('property_type').prefetch_related('images')
@@ -179,6 +201,26 @@ class CustomerSavedPropertyCreateView(generics.CreateAPIView):
             if 'unique constraint' in str(e).lower():
                 return Response({'message': 'Property already saved'}, status=status.HTTP_400_BAD_REQUEST)
             return Response({'message': 'Error saving property'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CustomerSavedPropertyDeleteView(generics.DestroyAPIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        property_id = self.kwargs['property_id']
+        try:
+            return SavedProperty.objects.get(
+                customer=self.request.user,
+                property_id=property_id
+            )
+        except SavedProperty.DoesNotExist:
+            from django.http import Http404
+            raise Http404("Saved property not found")
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return Response({'message': 'Property removed from saved list'}, status=status.HTTP_200_OK)
 
 
 class CustomerInquiriesView(generics.ListAPIView):
@@ -268,7 +310,7 @@ class CustomerDocumentDownloadView(generics.RetrieveAPIView):
 
 # Admin Dashboard Views
 class AdminAnalyticsView(APIView):
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAdminRole]
 
     def get(self, request):
         # Calculate analytics data
@@ -308,7 +350,7 @@ class AdminAnalyticsView(APIView):
 
 class AdminUserManagementViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAdminRole]
 
     def get_serializer_class(self):
         if self.action == 'create':
@@ -568,25 +610,73 @@ class AdminContactsView(APIView):
     permission_classes = [IsAdminUser]
 
     def get(self, request):
-        # For now, return mock data since we don't have a Contact model
-        # You can implement this when you add a Contact model
-        contacts = [
-            {
-                'id': 1,
-                'name': 'John Doe',
-                'email': 'john@example.com',
-                'message': 'Interested in property listing',
-                'created_at': '2025-01-10T10:00:00Z'
-            },
-            {
-                'id': 2,
-                'name': 'Jane Smith',
-                'email': 'jane@example.com',
-                'message': 'Need help with property search',
-                'created_at': '2025-01-09T15:30:00Z'
-            }
-        ]
+        # Use the real Contact model
+        from django.db.models import Q
+
+        queryset = Contact.objects.all().order_by('-created_at')
+
+        # Filter parameters
+        status_filter = request.query_params.get('status')
+        subject_filter = request.query_params.get('subject')
+        search = request.query_params.get('search')
+
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+        if subject_filter:
+            queryset = queryset.filter(subject=subject_filter)
+        if search:
+            queryset = queryset.filter(
+                Q(first_name__icontains=search) |
+                Q(last_name__icontains=search) |
+                Q(email__icontains=search) |
+                Q(message__icontains=search)
+            )
+
+        # Serialize the data
+        contacts = []
+        for contact in queryset:
+            contacts.append({
+                'id': contact.id,
+                'first_name': contact.first_name,
+                'last_name': contact.last_name,
+                'full_name': contact.full_name,
+                'email': contact.email,
+                'phone': contact.phone,
+                'subject': contact.subject,
+                'message': contact.message,
+                'preferred_contact': contact.preferred_contact,
+                'status': contact.status,
+                'created_at': contact.created_at.isoformat(),
+                'updated_at': contact.updated_at.isoformat(),
+                'customer_details': UserSerializer(contact.customer).data if contact.customer else None
+            })
+
         return Response(contacts)
+
+
+class AdminContactResolveView(APIView):
+    """Mark contact as resolved"""
+    permission_classes = [IsAdminUser]
+
+    def put(self, request, contact_id):
+        try:
+            contact = Contact.objects.get(id=contact_id)
+            contact.status = 'resolved'
+            contact.save()
+
+            return Response({
+                'message': 'Contact marked as resolved',
+                'contact': {
+                    'id': contact.id,
+                    'status': contact.status,
+                    'full_name': contact.full_name
+                }
+            })
+        except Contact.DoesNotExist:
+            return Response(
+                {'message': 'Contact not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
 
 class AdminAchievementsView(APIView):
@@ -690,6 +780,57 @@ class AdminGalleryManagementViewSet(viewsets.ModelViewSet):
     queryset = Gallery.objects.all()
     serializer_class = GallerySerializer
     permission_classes = [IsAdminUser]
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class AdminGalleryImageManagementViewSet(viewsets.ModelViewSet):
+    """Admin CRUD for gallery images"""
+    queryset = GalleryImage.objects.all()
+    serializer_class = GalleryImageSerializer
+    permission_classes = [IsAdminUser]
+    authentication_classes = [TokenAuthentication]
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class AdminPropertyImageManagementViewSet(viewsets.ModelViewSet):
+    """Admin CRUD for property images"""
+    queryset = PropertyImage.objects.all()
+    serializer_class = PropertyImageSerializer
+    permission_classes = [IsAdminUser]
+    authentication_classes = [TokenAuthentication]
+
+    def perform_create(self, serializer):
+        """Handle order assignment and primary image logic"""
+        property_instance = serializer.validated_data.get('property')
+
+        # Get the next order number for this property
+        existing_images = PropertyImage.objects.filter(property=property_instance)
+        next_order = existing_images.count()
+
+        # If order is not provided or is 0, use the next available order
+        if 'order' not in serializer.validated_data or serializer.validated_data['order'] == 0:
+            serializer.validated_data['order'] = next_order
+
+        # If this is the first image for the property, make it primary
+        if existing_images.count() == 0:
+            serializer.validated_data['is_primary'] = True
+
+        # If setting as primary, unset other primary images for this property
+        if serializer.validated_data.get('is_primary', False):
+            existing_images.update(is_primary=False)
+
+        serializer.save()
+
+    def perform_update(self, serializer):
+        """Handle primary image logic on update"""
+        # If setting as primary, unset other primary images for this property
+        if serializer.validated_data.get('is_primary', False):
+            property_instance = serializer.instance.property
+            PropertyImage.objects.filter(property=property_instance).exclude(
+                id=serializer.instance.id
+            ).update(is_primary=False)
+
+        serializer.save()
 
 
 class AdminNewsManagementViewSet(viewsets.ModelViewSet):

@@ -8,7 +8,7 @@ from .views import (
     PropertyViewSet,
 
     # Customer Dashboard Views
-    CustomerSavedPropertiesView, CustomerSavedPropertyCreateView,
+    CustomerSavedPropertiesView, CustomerSavedPropertyCreateView, CustomerSavedPropertyDeleteView,
     CustomerInquiriesView, CustomerInquiryCreateView,
     CustomerVisitsView, CustomerVisitCreateView,
     CustomerMessagesView, CustomerMessageCreateView,
@@ -19,10 +19,11 @@ from .views import (
     AdminServiceManagementViewSet, AdminHeroSlideManagementViewSet,
     AdminJourneyStepManagementViewSet, AdminAgentManagementViewSet,
     AdminPropertyTypeManagementViewSet, AdminOrganizationManagementView,
-    AdminAboutUsManagementViewSet, AdminContactsView, AdminAchievementsView,
-    AdminGalleryManagementViewSet, AdminNewsManagementViewSet, AdminNewsCategoryManagementViewSet,
-    AdminTeamManagementViewSet, AdminContactManagementViewSet,
-    AdminTeamManagementViewSet,
+    AdminAboutUsManagementViewSet, AdminContactsView, AdminContactResolveView, AdminAchievementsView,
+    AdminGalleryManagementViewSet, AdminGalleryImageManagementViewSet,
+    AdminPropertyImageManagementViewSet, AdminNewsManagementViewSet,
+    AdminNewsCategoryManagementViewSet, AdminTeamManagementViewSet,
+    AdminContactManagementViewSet,
 
     # Additional Views
     PropertyTypeListView, OrganizationDetailView, ServiceListView,
@@ -42,6 +43,7 @@ from .views import (
 # Router for ViewSets
 router = DefaultRouter()
 router.register(r'properties', PropertyViewSet, basename='property')
+router.register(r'admin/properties', PropertyViewSet, basename='admin-properties')
 router.register(r'admin/users', AdminUserManagementViewSet, basename='admin-users')
 router.register(r'admin/services', AdminServiceManagementViewSet, basename='admin-services')
 router.register(r'admin/hero-slides', AdminHeroSlideManagementViewSet, basename='admin-hero-slides')
@@ -50,6 +52,8 @@ router.register(r'admin/agents', AdminAgentManagementViewSet, basename='admin-ag
 router.register(r'admin/property-types', AdminPropertyTypeManagementViewSet, basename='admin-property-types')
 router.register(r'admin/about-us', AdminAboutUsManagementViewSet, basename='admin-about-us')
 router.register(r'admin/gallery', AdminGalleryManagementViewSet, basename='admin-gallery')
+router.register(r'admin/gallery-images', AdminGalleryImageManagementViewSet, basename='admin-gallery-images')
+router.register(r'admin/property-images', AdminPropertyImageManagementViewSet, basename='admin-property-images')
 router.register(r'admin/news', AdminNewsManagementViewSet, basename='admin-news')
 router.register(r'admin/news-categories', AdminNewsCategoryManagementViewSet, basename='admin-news-categories')
 router.register(r'admin/team', AdminTeamManagementViewSet, basename='admin-team')
@@ -65,6 +69,7 @@ urlpatterns = [
     # Customer Dashboard URLs
     path('api/customer/saved-properties/', CustomerSavedPropertiesView.as_view(), name='customer-saved-properties'),
     path('api/customer/saved-properties/create/', CustomerSavedPropertyCreateView.as_view(), name='customer-saved-properties-create'),
+    path('api/customer/saved-properties/<int:property_id>/', CustomerSavedPropertyDeleteView.as_view(), name='customer-saved-properties-delete'),
     path('api/customer/inquiries/', CustomerInquiriesView.as_view(), name='customer-inquiries'),
     path('api/customer/inquiries/create/', CustomerInquiryCreateView.as_view(), name='customer-inquiries-create'),
     path('api/customer/visits/', CustomerVisitsView.as_view(), name='customer-visits'),
@@ -82,6 +87,7 @@ urlpatterns = [
     path('api/admin/analytics/', AdminAnalyticsView.as_view(), name='admin-analytics'),
     path('api/admin/organization/', AdminOrganizationManagementView.as_view(), name='admin-organization'),
     path('api/admin/contacts/', AdminContactsView.as_view(), name='admin-contacts'),
+    path('api/admin/contacts/<int:contact_id>/mark_resolved/', AdminContactResolveView.as_view(), name='admin-contact-resolve'),
     path('api/admin/achievements/', AdminAchievementsView.as_view(), name='admin-achievements'),
     
     # Content Management URLs
