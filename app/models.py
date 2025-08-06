@@ -169,13 +169,15 @@ class Property(models.Model):
     @property
     def formatted_area(self):
         """Return formatted area with unit"""
-        unit_display = dict(self.AREA_UNIT_CHOICES).get(self.area_unit, self.area_unit)
+        if self.area is None:
+            return "Area not specified"
+        unit_display = dict(self.AREA_UNIT_CHOICES).get(self.area_unit, self.area_unit or 'unit')
         return f"{self.area} {unit_display}"
 
     @property
     def purpose_display(self):
         """Return human-readable purpose"""
-        return dict(self.PURPOSE_CHOICES).get(self.property_purpose, self.property_purpose)
+        return dict(self.PURPOSE_CHOICES).get(self.property_purpose, self.property_purpose or 'Not specified')
 
     @property
     def formatted_land_area(self):
@@ -207,6 +209,8 @@ class Property(models.Model):
     @property
     def area_in_sqft(self):
         """Convert area to square feet for calculations"""
+        if self.area is None:
+            return 0.0
         conversion_rates = {
             'aana': 342.25,
             'ropani': 5476,  # 16 aana
